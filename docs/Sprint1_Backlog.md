@@ -17,6 +17,7 @@ Define the important aspects of the project before beginning coding and actual s
   - ERD files
   - Documentation
   - Future source code
+- Garnered a better understanding of GitHub
 
 ---
 
