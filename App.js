@@ -1,100 +1,61 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-    FlatList,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SEMESTER = {
-    id: 1,
-    name: "Fall 2025",
-    startDate: "2025-08-25",
-    endDate: "2025-12-14",
+  id: 1,
+  name: "Fall 2025",
+  startDate: "2025-08-25",
+  endDate: "2025-12-14",
 };
-const STUDENT = {
-    id: 1,
-    name: "Test Student",
-    email: "student@live.maryville.edu",
-};
-const ACCOUNT = {
-    id: 1,
-    studentId: 1,
-    semesterId: 1,
-    startingBalance: 2100.00, /*This will change in the future depending on the student and their specific starting balance */
-};
+
 const VENDORS = [
-    {id: 1, name: "Lombardi - Mozzie's"},
-    {id: 2, name: "Lombardi - Copperhead Jacks"},
-    {id: 3, name: "Lombardi - Urban Hen"},
-    {id: 4, name: "Lombardi - Sushi by Faith"},
-    {id: 4, name: "Lombardi - Rice It Up"},
-    {id: 5, name: "Lombardi - Drinks"},
-    {id: 6, name: "Lombardi - Desserts"},
-    {id: 6, name: "Lombardi - Pre-Packaged Meals"},
-    {id: 6, name: "Lombardi - Snacks"},
-    {id: 6, name: "Starbucks"},
-    {id: 6, name: "Louie's"},
+  { id: 1, name: "Lombardi - Mozzie's" },
+  { id: 2, name: "Lombardi - Copperhead Jacks" },
+  { id: 3, name: "Lombardi - Urban Hen" },
+  { id: 4, name: "Lombardi - Sushi by Faith" },
+  { id: 5, name: "Lombardi - Rice It Up" },
+  { id: 6, name: "Lombardi - Drinks" },
+  { id: 7, name: "Lombardi - Desserts" },
+  { id: 8, name: "Lombardi - Pre-Packaged Meals" },
+  { id: 9, name: "Lombardi - Snacks" },
+  { id: 10, name: "Starbucks" },
+  { id: 11, name: "Louie's" },
 ];
+
 const CATEGORIES = [
-    {id: "meal", label: "Meals / Entrees"},
-    {id: "drink", label: "Drinks"},
-    {id: "dessert", label: "Desserts"},
-    {id: "snack", label: "Snacks"},
-    {id: "prepackaged", label: "Pre-Packaged Meals"},
+  { id: "meal", label: "Meals / Entrees" },
+  { id: "drink", label: "Drinks" },
+  { id: "dessert", label: "Desserts" },
+  { id: "snack", label: "Snacks" },
+  { id: "prepackaged", label: "Pre-Packaged Meals" },
 ];
 
- {/*These are placeholders for now and do not include all items or actual prices */}
 const ITEMS = [
-    {id: 1, name: "Mozzie's Pizza", categoryId: "meal", defaultPrice: 11.50},
-    {id: 2, name: "Hamburger", categoryId: "meal", defaultPrice: 9.00},
-    {id: 3, name: "Coffee", categoryId: "drink", defaultPrice: 5.00},
-    {id: 4, name: "Soft Drink", categoryId: "drink", defaultPrice: 3.50},
-    {id: 5, name: "Bag of Chips", categoryId: "snack", defaultPrice: 4.00},
-    {id: 6, name: "Hershey's Ice Cream Pint", categoryId: "dessert", defaultPrice: 8.00},
-
-];
-
-const SEED_TRANSACTIONS = [
+  { id: 1, name: "Mozzie's Pizza", categoryId: "meal", defaultPrice: 11.5 },
+  { id: 2, name: "Hamburger", categoryId: "meal", defaultPrice: 9.0 },
+  { id: 3, name: "Coffee", categoryId: "drink", defaultPrice: 5.0 },
+  { id: 4, name: "Soft Drink", categoryId: "drink", defaultPrice: 3.5 },
+  { id: 5, name: "Bag of Chips", categoryId: "snack", defaultPrice: 4.0 },
   {
-    id: 1,
-    studentId: 1,
-    semesterId: 1,
-    vendorId: 1,
-    datetime: "2025-09-01T12:10",
-    lines: [
-      { itemId: 1, quantity: 1, price: 7.5 },
-      { itemId: 4, quantity: 1, price: 2.5 },
-    ],
-  },
-  {
-    id: 2,
-    studentId: 1,
-    semesterId: 1,
-    vendorId: 3,
-    datetime: "2025-09-02T08:45",
-    lines: [{ itemId: 3, quantity: 1, price: 4.0 }],
-  },
-  {
-    id: 3,
-    studentId: 1,
-    semesterId: 1,
-    vendorId: 2,
-    datetime: "2025-09-03T18:30",
-    lines: [
-      { itemId: 2, quantity: 1, price: 9.0 },
-      { itemId: 5, quantity: 1, price: 3.0 },
-    ],
+    id: 6,
+    name: "Hershey's Ice Cream Pint",
+    categoryId: "dessert",
+    defaultPrice: 8.0,
   },
 ];
 
 let NEXT_TRANSACTION_ID = 4;
 
-// ----- helpers ------------------------------------------------------------
+// ---- helpers --------------------------------------------------------------
 
 function todayISO() {
   const d = new Date();
@@ -114,7 +75,7 @@ function listOpenDatesBetween(startISO, endISO, closedDaySet) {
     if (!closedDaySet.has(iso)) {
       out.push(iso);
     }
-    d.setDate(d.getDate() + 1);
+    d.setDate(d.setDate(d.getDate()) + 1);
   }
   return out;
 }
@@ -138,12 +99,22 @@ function transactionTotal(tx, itemsMap) {
   return sum;
 }
 
+// keys for per-user storage
+const profileKey = (username) => `LL_PROFILE_${username.toLowerCase()}`;
+const transactionsKey = (username) => `LL_TX_${username.toLowerCase()}`;
+
 // ----- Main App -----------------------------------------------------------
 
 export default function App() {
-  const [view, setView] = useState("student"); // "student" | "staff"
-  const [transactions, setTransactions] = useState(SEED_TRANSACTIONS);
+  const [view, setView] = useState("student"); // student for student | staff for staff
+  const [currentUser, setCurrentUser] = useState(null); // { username, startingBalance }
+  const [transactions, setTransactions] = useState([]);
   const [closedDays, setClosedDays] = useState(["2025-11-27", "2025-11-28"]);
+  const [loadingUser, setLoadingUser] = useState(false);
+
+  // login stages: first username, then starting balance depending on if new user or not
+  const [loginStage, setLoginStage] = useState("username"); // "username" | "starting"
+  const [pendingUsername, setPendingUsername] = useState("");
 
   const itemsMap = useMemo(() => {
     const m = {};
@@ -159,13 +130,24 @@ export default function App() {
 
   const closedDaysSet = useMemo(() => new Set(closedDays), [closedDays]);
 
-  const studentTx = useMemo(
-    () =>
-      transactions.filter(
-        (t) => t.studentId === STUDENT.id && t.semesterId === SEMESTER.id
-      ),
-    [transactions]
-  );
+  // Save transactions whenever user or transactions change
+  useEffect(() => {
+    const saveTx = async () => {
+      if (!currentUser) return;
+      try {
+        await AsyncStorage.setItem(
+          transactionsKey(currentUser.username),
+          JSON.stringify(transactions)
+        );
+      } catch (e) {
+        console.log("Failed to save transactions", e);
+      }
+    };
+    saveTx();
+  }, [currentUser, transactions]);
+
+  // metrics for current user
+  const studentTx = transactions;
 
   const totalSpent = useMemo(
     () =>
@@ -176,7 +158,10 @@ export default function App() {
     [studentTx, itemsMap]
   );
 
-  const remainingBalance = ACCOUNT.startingBalance - totalSpent;
+  const remainingBalance =
+    currentUser?.startingBalance != null
+      ? currentUser.startingBalance - totalSpent
+      : 0;
 
   const averageDailySpending = useMemo(() => {
     if (studentTx.length === 0) return 0;
@@ -310,12 +295,84 @@ export default function App() {
       .sort((a, b) => (a.date < b.date ? -1 : 1));
   }, [transactions, itemsMap]);
 
-  // handlers
+  // ----- login flow --------------------------------------------------------
+
+  // Step 1: user enters username only
+  async function handleUsernameSubmit(usernameInput) {
+    const username = usernameInput.trim().toLowerCase();
+    if (!username) return;
+    setLoadingUser(true);
+
+    try {
+      const pKey = profileKey(username);
+      const tKey = transactionsKey(username);
+
+      const existingProfileJson = await AsyncStorage.getItem(pKey);
+
+      if (existingProfileJson) {
+        // Returning user: load profile + transactions and go to app
+        const profile = JSON.parse(existingProfileJson);
+        const txJson = await AsyncStorage.getItem(tKey);
+        const txs = txJson ? JSON.parse(txJson) : [];
+
+        setCurrentUser(profile);
+        setTransactions(txs);
+        NEXT_TRANSACTION_ID =
+          txs.reduce((max, t) => Math.max(max, t.id || 0), 0) + 1;
+        setLoginStage("username"); // reset
+      } else {
+        // New user: save username and go to starting-balance screen
+        setPendingUsername(username);
+        setLoginStage("starting");
+      }
+    } catch (e) {
+      console.log("Error during username submit", e);
+    } finally {
+      setLoadingUser(false);
+    }
+  }
+
+  // Step 2: first-time user enters starting balance
+  async function handleStartingBalanceSubmit(startingBalanceInput) {
+    const starting = parseFloat(startingBalanceInput);
+    if (isNaN(starting) || starting <= 0 || !pendingUsername) return;
+
+    setLoadingUser(true);
+    try {
+      const username = pendingUsername;
+      const pKey = profileKey(username);
+      const tKey = transactionsKey(username);
+
+      const profile = { username, startingBalance: starting };
+      await AsyncStorage.setItem(pKey, JSON.stringify(profile));
+      await AsyncStorage.setItem(tKey, JSON.stringify([]));
+
+      setCurrentUser(profile);
+      setTransactions([]);
+      NEXT_TRANSACTION_ID = 1;
+      setLoginStage("username");
+      setPendingUsername("");
+    } catch (e) {
+      console.log("Error saving starting balance", e);
+    } finally {
+      setLoadingUser(false);
+    }
+  }
+
+  function handleLogout() {
+    setCurrentUser(null);
+    setTransactions([]);
+    setView("student");
+    setLoginStage("username");
+    setPendingUsername("");
+  }
+
+  // handlers for transactions / closed days
+
   function handleAddTransaction(form) {
+    if (!currentUser) return;
     const newTx = {
       id: NEXT_TRANSACTION_ID++,
-      studentId: STUDENT.id,
-      semesterId: SEMESTER.id,
       vendorId: Number(form.vendorId),
       datetime: `${form.date}T${form.time || "12:00"}`,
       lines: [
@@ -340,13 +397,40 @@ export default function App() {
     setClosedDays((prev) => prev.filter((d) => d !== dateISO));
   }
 
+  // ---- RENDER -------------------------------------------------------------
+
+  // No user yet → show the login flow
+  if (!currentUser) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.container}>
+          {loginStage === "username" ? (
+            <UsernameScreen
+              onNext={handleUsernameSubmit}
+              loading={loadingUser}
+            />
+          ) : (
+            <StartingBalanceScreen
+              username={pendingUsername}
+              onNext={handleStartingBalanceSubmit}
+              loading={loadingUser}
+            />
+          )}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Main app once user is known
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Lombardi Logger</Text>
-          <Text style={styles.subtitle}>
-            Dining hall money tracker
+          <Text style={styles.subtitle}>Dining hall money tracker</Text>
+          <Text style={[styles.muted, styles.smallText]}>
+            Logged in as{" "}
+            <Text style={styles.bold}>{currentUser.username}</Text>
           </Text>
           <View style={styles.toggleRow}>
             <ToggleButton
@@ -359,13 +443,17 @@ export default function App() {
               label="Staff View"
               onPress={() => setView("staff")}
             />
+            <Pressable style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutText}>Logout</Text>
+            </Pressable>
           </View>
         </View>
 
         {view === "student" ? (
           <StudentView
-            student={STUDENT}
+            studentName={currentUser.username}
             semester={SEMESTER}
+            startingBalance={currentUser.startingBalance}
             totalSpent={totalSpent}
             remainingBalance={remainingBalance}
             averageDailySpending={averageDailySpending}
@@ -432,9 +520,87 @@ function SummaryTile({ label, value, highlight }) {
   );
 }
 
+// ----- Login screens -------------------------------------------------------
+
+function UsernameScreen({ onNext, loading }) {
+  const [username, setUsername] = useState("");
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>Lombardi Logger</Text>
+      <Text style={[styles.muted, { marginBottom: 8 }]}>
+        Enter your username to continue.
+      </Text>
+
+      <View style={styles.field}>
+        <Text style={styles.fieldLabel}>Username</Text>
+        <TextInput
+          style={[styles.input, { color: "#ffffff" }]}
+          value={username}
+          onChangeText={setUsername}
+          placeholder="e.g. austin23"
+          placeholderTextColor="#6b7280"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
+
+      <Pressable
+        style={[styles.button, loading && { opacity: 0.7 }]}
+        onPress={() => onNext(username)}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? "Checking..." : "Continue"}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function StartingBalanceScreen({ username, onNext, loading }) {
+  const [startingBalance, setStartingBalance] = useState("");
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>Welcome, {username}</Text>
+      <Text style={[styles.muted, { marginBottom: 8 }]}>
+        It looks like this is your first time using Lombardi Logger.
+        Enter your starting dining dollar balance for this semester.
+      </Text>
+
+      <View style={styles.field}>
+        <Text style={styles.fieldLabel}>Starting Balance</Text>
+        <TextInput
+          style={[styles.input, { color: "#ffffff" }]}
+          value={startingBalance}
+          onChangeText={setStartingBalance}
+          placeholder="e.g. 2100"
+          placeholderTextColor="#6b7280"
+          keyboardType="numeric"
+          autoCorrect={false}
+        />
+      </View>
+
+      <Pressable
+        style={[styles.button, loading && { opacity: 0.7 }]}
+        onPress={() => onNext(startingBalance)}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? "Saving..." : "Continue to App"}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+// ----- Student View --------------------------------------------------------
+
 function StudentView({
-  student,
+  studentName,
   semester,
+  startingBalance,
   totalSpent,
   remainingBalance,
   averageDailySpending,
@@ -453,14 +619,14 @@ function StudentView({
       contentContainerStyle={styles.scrollContent}
     >
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Welcome, {student.name}</Text>
+        <Text style={styles.cardTitle}>Welcome, {studentName}</Text>
         <Text style={styles.muted}>
           Semester: <Text style={styles.bold}>{semester.name}</Text>
         </Text>
         <View style={styles.summaryGrid}>
           <SummaryTile
             label="Starting Balance"
-            value={`$${ACCOUNT.startingBalance.toFixed(2)}`}
+            value={`$${startingBalance.toFixed(2)}`}
           />
           <SummaryTile
             label="Total Spent"
@@ -564,7 +730,7 @@ function AddTransactionForm({ onAdd, items, vendors }) {
         label="Vendor (id)"
         value={vendorId}
         onChangeText={setVendorId}
-        helper="Use: 1 = Mozzie's, 2 = Grill, 3 = Coffee Bar"
+        helper="Use: 1 = Mozzie's, 2 = Copperhead Jack's, etc."
       />
 
       <FormField
@@ -617,22 +783,22 @@ function TransactionsList({ transactions, itemsMap, vendorsMap }) {
     return <Text style={styles.muted}>No transactions yet.</Text>;
   }
 
+  const sorted = transactions
+    .slice()
+    .sort((a, b) => (a.datetime < b.datetime ? -1 : 1));
+
   return (
-    <FlatList
-      data={transactions.slice().sort((a, b) =>
-        a.datetime < b.datetime ? -1 : 1
-      )}
-      keyExtractor={(item) => String(item.id)}
-      renderItem={({ item }) => {
+    <View>
+      {sorted.map((item) => {
         const total = transactionTotal(item, itemsMap);
         const firstItem = itemsMap[item.lines[0]?.itemId];
         const categoryLabel = firstItem
-          ? CATEGORIES.find((c) => c.id === firstItem.categoryId)
-              ?.label ?? firstItem.categoryId
+          ? CATEGORIES.find((c) => c.id === firstItem.categoryId)?.label ??
+            firstItem.categoryId
           : "-";
 
         return (
-          <View style={styles.txRow}>
+          <View style={styles.txRow} key={item.id}>
             <View style={{ flex: 1 }}>
               <Text style={styles.txTitle}>
                 {vendorsMap[item.vendorId]?.name ?? "Vendor"}
@@ -659,8 +825,8 @@ function TransactionsList({ transactions, itemsMap, vendorsMap }) {
             <Text style={styles.txAmount}>${total.toFixed(2)}</Text>
           </View>
         );
-      }}
-    />
+      })}
+    </View>
   );
 }
 
@@ -909,6 +1075,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#111827",
     borderRadius: 999,
     padding: 4,
+    alignItems: "center",
   },
   toggleButton: {
     paddingVertical: 6,
@@ -925,6 +1092,18 @@ const styles = StyleSheet.create({
   toggleButtonTextActive: {
     color: "#111827",
     fontWeight: "600",
+  },
+  logoutButton: {
+    marginLeft: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#f97316",
+  },
+  logoutText: {
+    fontSize: 11,
+    color: "#f97316",
   },
   scroll: {
     flex: 1,
