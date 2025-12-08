@@ -13,8 +13,7 @@ The primary goal of this product is for it to become an extension of the current
 
 # Current Stage
 
-We are currently in the stage of setting everything up pre-code and gathering an understanding of the requirements to make the application successful and complete all of the requests of potential consumers.
-
+Adding all options and proper prices. Recently added login page and user data tracking.
 
 # Terminal Commands
 
