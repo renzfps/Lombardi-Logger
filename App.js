@@ -297,7 +297,6 @@ export default function App() {
 
   // ----- login flow --------------------------------------------------------
 
-  // Step 1: user enters username only
   async function handleUsernameSubmit(usernameInput) {
     const username = usernameInput.trim().toLowerCase();
     if (!username) return;
@@ -310,7 +309,6 @@ export default function App() {
       const existingProfileJson = await AsyncStorage.getItem(pKey);
 
       if (existingProfileJson) {
-        // Returning user: load profile + transactions and go to app
         const profile = JSON.parse(existingProfileJson);
         const txJson = await AsyncStorage.getItem(tKey);
         const txs = txJson ? JSON.parse(txJson) : [];
@@ -319,9 +317,8 @@ export default function App() {
         setTransactions(txs);
         NEXT_TRANSACTION_ID =
           txs.reduce((max, t) => Math.max(max, t.id || 0), 0) + 1;
-        setLoginStage("username"); // reset
+        setLoginStage("username");
       } else {
-        // New user: save username and go to starting-balance screen
         setPendingUsername(username);
         setLoginStage("starting");
       }
@@ -332,7 +329,6 @@ export default function App() {
     }
   }
 
-  // Step 2: first-time user enters starting balance
   async function handleStartingBalanceSubmit(startingBalanceInput) {
     const starting = parseFloat(startingBalanceInput);
     if (isNaN(starting) || starting <= 0 || !pendingUsername) return;
@@ -399,11 +395,10 @@ export default function App() {
 
   // ---- RENDER -------------------------------------------------------------
 
-  // No user yet → show the login flow
   if (!currentUser) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.container}>
+        <View style={styles.loginContainer}>
           {loginStage === "username" ? (
             <UsernameScreen
               onNext={handleUsernameSubmit}
@@ -421,14 +416,13 @@ export default function App() {
     );
   }
 
-  // Main app once user is known
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Lombardi Logger</Text>
           <Text style={styles.subtitle}>Dining hall money tracker</Text>
-          <Text style={[styles.muted, styles.smallText]}>
+          <Text style={[styles.muted, styles.smallText, { marginTop: 4 }]}>
             Logged in as{" "}
             <Text style={styles.bold}>{currentUser.username}</Text>
           </Text>
@@ -528,7 +522,7 @@ function UsernameScreen({ onNext, loading }) {
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>Lombardi Logger</Text>
-      <Text style={[styles.muted, { marginBottom: 8 }]}>
+      <Text style={[styles.muted, { marginBottom: 10 }]}>
         Enter your username to continue.
       </Text>
 
@@ -564,7 +558,7 @@ function StartingBalanceScreen({ username, onNext, loading }) {
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>Welcome, {username}</Text>
-      <Text style={[styles.muted, { marginBottom: 8 }]}>
+      <Text style={[styles.muted, { marginBottom: 10 }]}>
         It looks like this is your first time using Lombardi Logger.
         Enter your starting dining dollar balance for this semester.
       </Text>
@@ -660,7 +654,7 @@ function StudentView({
             }
           />
         </View>
-        <Text style={[styles.muted, styles.smallText]}>
+        <Text style={[styles.muted, styles.smallText, { marginTop: 6 }]}>
           Closed days are excluded from these predictions.
         </Text>
       </View>
@@ -780,7 +774,11 @@ function FormField({ label, value, onChangeText, helper, keyboardType }) {
 
 function TransactionsList({ transactions, itemsMap, vendorsMap }) {
   if (transactions.length === 0) {
-    return <Text style={styles.muted}>No transactions yet.</Text>;
+    return (
+      <Text style={[styles.muted, { marginTop: 4 }]}>
+        No transactions yet.
+      </Text>
+    );
   }
 
   const sorted = transactions
@@ -788,7 +786,7 @@ function TransactionsList({ transactions, itemsMap, vendorsMap }) {
     .sort((a, b) => (a.datetime < b.datetime ? -1 : 1));
 
   return (
-    <View>
+    <View style={{ marginTop: 4 }}>
       {sorted.map((item) => {
         const total = transactionTotal(item, itemsMap);
         const firstItem = itemsMap[item.lines[0]?.itemId];
@@ -1003,7 +1001,7 @@ function StaffView({
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Closed Days Management</Text>
-        <Text style={[styles.muted, styles.smallText]}>
+        <Text style={[styles.muted, styles.smallText, { marginBottom: 6 }]}>
           Closed days are excluded from student predictions.
         </Text>
 
@@ -1053,25 +1051,30 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingTop: 12,
+  },
+  loginContainer: {
+    flex: 1,
+    paddingHorizontal: 18,
+    justifyContent: "center",
   },
   header: {
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "700",
     color: "#f9fafb",
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#9ca3af",
   },
   toggleRow: {
     flexDirection: "row",
-    marginTop: 8,
+    marginTop: 10,
     backgroundColor: "#111827",
     borderRadius: 999,
     padding: 4,
@@ -1114,17 +1117,22 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#0b1120",
-    borderRadius: 14,
-    padding: 12,
-    marginVertical: 4,
+    borderRadius: 16,
+    padding: 14,
+    marginVertical: 6,
     borderWidth: 1,
     borderColor: "#1f2937",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
     color: "#f9fafb",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   muted: {
     color: "#9ca3af",
@@ -1140,11 +1148,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginTop: 8,
+    marginTop: 10,
   },
   summaryTile: {
     backgroundColor: "#020617",
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 10,
     borderWidth: 1,
     borderColor: "#1f2937",
@@ -1158,26 +1166,26 @@ const styles = StyleSheet.create({
     color: "#9ca3af",
   },
   summaryValue: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
     color: "#f9fafb",
     marginTop: 2,
   },
   field: {
-    marginBottom: 8,
+    marginBottom: 10,
     flex: 1,
   },
   fieldLabel: {
     fontSize: 11,
     color: "#9ca3af",
-    marginBottom: 2,
+    marginBottom: 3,
   },
   input: {
     borderWidth: 1,
     borderColor: "#374151",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     color: "#f9fafb",
     backgroundColor: "#020617",
     fontSize: 13,
@@ -1186,22 +1194,23 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   button: {
-    marginTop: 8,
+    marginTop: 10,
     backgroundColor: "#f97316",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
     borderRadius: 999,
-    alignSelf: "flex-start",
+    alignSelf: "stretch",
+    alignItems: "center",
   },
   buttonText: {
     color: "#111827",
     fontWeight: "600",
-    fontSize: 13,
+    fontSize: 14,
   },
   chartRow: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 8,
+    marginTop: 10,
   },
   chart: {
     flex: 1,
